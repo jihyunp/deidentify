@@ -281,8 +281,4 @@ if __name__ == "__main__":
     new_students_file = sys.argv[2]
 
     stkeys = StudentKeys(mapping_file, new_students_file)
-    # newdata = "/Volumes/GSE-IVLE/IVLE Identifiable Data/Year 1/Winter 2016/BIO SCI 98/BIO SCI 98 16Wi - Merged Data - GBK SVY OIR.csv"
-    # deidentified_key = "/Volumes/GSE-IVLE/IVLE Identifiable Data/Random ID Key/keys.csv"
-    # newdata = "./BIO SCI 98 16Wi - Merged Data - GBK SVY OIR.csv"
-    # newdata = "./Physics 3A SecA 16Sum1 Merged Data - GB SVY OIR.csv"
-    # stkeys = StudentKeys('./keys.csv', newdata)
+
