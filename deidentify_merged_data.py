@@ -21,7 +21,7 @@ if __name__ == "__main__":
         print("Reading mapping file " + mapping_file)
         with open(mapping_file, 'r') as f:
             reader = csv.reader(f, delimiter=',')
-            header = reader.next()
+            header = next(reader)
             for row in reader:
                 name = row[0]
                 stid = row[1]  # kept as string due to alphabets in student ids
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
         for col in col_list:
             for col_in_data in data.columns:
-                if (col in col_in_data) or (col_in_data == 'name') or (col_in_data == 'id'):
+                if (col in col_in_data) or (col_in_data == 'id'):
                     print("Deleting column "+ col_in_data)
                     new_data.drop(col_in_data, axis=1, inplace=True)
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         cols = ['roster_randomid'] + cols
         new_data = new_data.assign(roster_randomid=ridlist)
         new_data = new_data[cols]
-        deiden_merged_data_file = fname_wo_ext + "-deidentified.csv"
+        deiden_merged_data_file = fname_wo_ext + " DEID.csv"
         new_data.to_csv(deiden_merged_data_file, index=False)
         print("Deidentified merged data has been saved to " + deiden_merged_data_file)
 

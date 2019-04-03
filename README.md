@@ -1,8 +1,10 @@
 # De-identifying Scripts
 
-Jihyun Park (jihyunp@uci.edu)
+Jihyun Park (`jihyunp@uci.edu`)  
 Aug 24, 2017
 
+Modified by Renzhe Yu (`renzhey@uci.edu`)  
+Apr 1, 2019
 
 To deidentify clickstream data, you need to first run 'update_keys.py' which updates the 'master_keys.csv' file.
 

@@ -10,7 +10,7 @@ __author__ = 'jihyunp'
 
 def make_dir(dir_path):
     if not os.path.exists(dir_path):
-        print 'making ', dir_path
+        print('making ', dir_path)
         os.makedirs(dir_path)
 
 def print_usage():
@@ -77,7 +77,7 @@ class StudentKeys():
             print('\n*** Loading mapping file "' + mapping_file + '"')
             with open(mapping_file, 'r') as f:
                 reader = csv.reader(f, delimiter=',')
-                header = reader.next()
+                header = next(reader)
                 self.course_headers = header[5:]
                 for row in reader:
                     name = row[0]
@@ -148,7 +148,7 @@ class StudentKeys():
             print('Loading file "'+ new_students_file +'"')
             with open(new_students_file, 'r') as f:
                 reader = csv.reader(f, delimiter=',')
-                header = reader.next()
+                header = next(reader)
                 name_idx, sid_idx, ucid_idx, rid_idx, cid_idx = get_indices_from_header(header)
 
                 # Default values
@@ -259,7 +259,7 @@ class StudentKeys():
         copyfile(mapping_file, self.old_mapping_file)
 
         header = ['name_firstlast', 'studentid', 'ucinetid', 'randomid', 'canvasid'] + self.course_headers
-        with open(mapping_file, 'w') as f:
+        with open(mapping_file, 'w', newline='') as f:
             writer = csv.writer(f, delimiter=',')
             writer.writerow(header)
             for ucid in sorted(self.ucid2nsrc.keys()):
