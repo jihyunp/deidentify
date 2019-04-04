@@ -3,10 +3,12 @@ import os
 import csv
 from random import sample
 import numpy as np
+import pandas as pd
 from shutil import copyfile
 
 
 __author__ = 'jihyunp'
+__author__ = 'renzhey'
 
 def make_dir(dir_path):
     if not os.path.exists(dir_path):
@@ -16,28 +18,28 @@ def make_dir(dir_path):
 def print_usage():
     print('')
     print('----------------------------------------------------------------------------------------------')
-    print('** Usage: python ./update_keys.py <Mapping File> <New Students File> ')
-    print('** Example: python  ./update_keys.py  ./master_keys.csv  ../Year1/Physics3A_Merged_data.csv  ')
+    print('** Usage: python ./update_keys.py <Mapping File> <New Student Files> ')
+    print('** Example: python  ./update_keys.py  ./master_keys.csv  ./new_merged_files.txt ')
     print('----------------------------------------------------------------------------------------------')
     print('')
-    print('   <Mapping File> : Should be a .csv file that has')
+    print('   <Mapping File> : A .csv file that has')
     print('       <Name_firstlast>,<studentid>,<ucinetid>,<randomid>,<canvasid> as the first five columns.')
     print('       If there is no file with this name, a new mapping file will be created with this name.')
     print('')
-    print('   <New Students File> :  A .csv file that has the new students information. ')
-    print('       The first row should be the name of each column, and it should have at least "studentid", "ucinetid", "name_firstlast"')
+    print('   <New Student Files> :  A .txt file that lists .csv or .dta files (with path) of new student data. ')
+    print('       The .csv or .dta files are like ../Year1/Physics3A_Merged_data.csv ')
+    print('       In each .csv file, the first row should be the name of each column, and it should have at least ')
+    print('       "studentid", "ucinetid", "name_firstlast" ')
     print('       Once a random ID is assigned to a student, that random ID will not be updated.')
-    print('')
     print('')
     exit()
 
 
 class StudentKeys():
 
-    def __init__(self, mapping_file, new_students_file=None):
+    def __init__(self, mapping_file, new_student_files=None):
         self.mapping_file = mapping_file
         self.old_mapping_file = mapping_file.split(".csv")[0] + "_old.csv"
-        self.new_students_file = new_students_file
 
         self.ucid2nsrc = {} # UCINetID to [Name, StudentID, RandomID, CanvasID]
         self.ucid2coursearr = {} # UCINetID to array of course indicator (1 if the student has taken the course)
@@ -47,16 +49,18 @@ class StudentKeys():
         self.course_headers = []
         self.load_mapping_file()
 
-        if new_students_file is not None:
-            if os.path.exists(new_students_file):
-                new_course_name = self.get_course_name_from_st_file(self.new_students_file)
-                if new_course_name not in self.course_headers:
-                    self.course_headers.append(new_course_name)
-                    self.new_course= True
-                else:
-                    self.new_course = False
-                self.load_new_info_and_update_map()
-                self.write_mapping_file()
+        if new_student_files is not None:
+            if os.path.exists(new_student_files):
+                self.new_student_files = []
+                with open(new_student_files, 'r') as f:
+                    for file in f:
+                        self.new_student_files.append(file.splitlines()[0])
+                for file in self.new_student_files:
+                    new_course_name = self.get_course_name_from_st_file(file)
+                    if new_course_name not in self.course_headers:
+                        self.course_headers.append(new_course_name)
+                    self.load_new_info_and_update_map(file)
+                    self.write_mapping_file()
 
 
     def get_course_name_from_st_file(self, students_fpath):
@@ -93,7 +97,7 @@ class StudentKeys():
             print('\n*** No mapping file found. New mapping file will be created "' + mapping_file + '"')
 
 
-    def load_new_info_and_update_map(self):
+    def load_new_info_and_update_map(self, new_student_file):
 
         def get_indices_from_header(header):
             indices = [-1,-1,-1,-1,-1]  # Name, Stid, UCINetid, Randomid, CanvasId
@@ -127,26 +131,25 @@ class StudentKeys():
                 indices[4] = cid_idx
             return indices
 
-        print('\n*** Reading the new students info and assigning random Ids')
-        new_students_file = self.new_students_file
+        print('\n*** Reading new student info and assigning random Ids')
 
-        if new_students_file.endswith('dta'):
-            import pandas as pd
-            fname_wo_ext = new_students_file.split(".dta")[0]
+        if new_student_file.endswith('dta'):
+            fname_wo_ext = new_student_file.split(".dta")[0]
             csv_file = fname_wo_ext + ".csv"
-            data = pd.io.stata.read_stata(new_students_file)
+            data = pd.read_stata(new_student_file)
             print("Converting .dta file to .csv file")
             data.to_csv(csv_file, index=False)
-            new_students_file = csv_file
+            new_student_file = csv_file
 
-        if not new_students_file.endswith('.csv'):
+        if not new_student_file.endswith('.csv'):
             print('[ERROR]: new_students_file should be either .csv or .dta ')
             print_usage()
+            exit()
 
-        if os.path.exists(new_students_file):
-            print('\n*** Loading the new students file "' + new_students_file +'"')
-            print('Loading file "'+ new_students_file +'"')
-            with open(new_students_file, 'r') as f:
+        if os.path.exists(new_student_file):
+            print('\n*** Loading the new students file "' + new_student_file +'"')
+            print('Loading file "'+ new_student_file +'"')
+            with open(new_student_file, 'r') as f:
                 reader = csv.reader(f, delimiter=',')
                 header = next(reader)
                 name_idx, sid_idx, ucid_idx, rid_idx, cid_idx = get_indices_from_header(header)
@@ -158,7 +161,7 @@ class StudentKeys():
 
                 for row in reader:
                     if ucid_idx == -1:
-                        print('[ERROR] There is no column called "ucinetid" in file ' + new_students_file)
+                        print('[ERROR] There is no column called "ucinetid" in file ' + new_student_file)
                         print('        Stopping the process..')
                         exit()
                     else:
@@ -203,14 +206,14 @@ class StudentKeys():
                             # If not, just update to the newer info
                             # Also check if the name was empty, and update the name to the current name
                             if cid > 0 and cid != self.ucid2nsrc[ucid][3]:
-                                self.update_canvas_ID(ucid, cid, new_students_file)
+                                self.update_canvas_ID(ucid, cid, new_student_file)
 
                             if name_idx > -1 and len(name) > 3 and name != self.ucid2nsrc[ucid][0]:
                                 # print warning if already had a different student name before.
                                 # otherwise just update it
                                 if len(self.ucid2nsrc[ucid][0]) > 2: # has a differnt name
                                     print('[WARNING]: UCINetID <'+ucid+'> has two different names. ')
-                                    print('           Updating the student name for <'+ucid+'> to the one in '+new_students_file)
+                                    print('           Updating the student name for <'+ucid+'> to the one in '+new_student_file)
                                 else:
                                     print(' Student name for <'+ucid+'> has been updated.')
                                 self.ucid2nsrc[ucid][0] = name
@@ -220,7 +223,7 @@ class StudentKeys():
                                 # otherwise just update it
                                 if len(self.ucid2nsrc[ucid][1]) > 2:
                                     print('[WARNING]: UCINetID <'+ucid+'> has two different student IDs. ')
-                                    print('           Updating the student ID for <'+ucid+'> to the one in '+new_students_file)
+                                    print('           Updating the student ID for <'+ucid+'> to the one in '+new_student_file)
                                 else:
                                     print(' Student ID for <'+ucid+'> has been updated.')
                                 self.ucid2nsrc[ucid][1] = stid
@@ -229,11 +232,11 @@ class StudentKeys():
                                 self.ucid2coursearr[ucid].append(1)
 
 
-    def update_canvas_ID(self, ucid, cid, new_students_file):
+    def update_canvas_ID(self, ucid, cid, new_student_file):
         # print warning if already had a different canvasid before. otherwise just update it
         if self.ucid2nsrc[ucid][3] > 0:  # has a canvas id before
             print('[WARNING]: UCINetID <' + ucid + '> has two different canvas IDs. ')
-            print('           Updating canvas Id for <' + ucid + '> to the one in ' + new_students_file)
+            print('           Updating canvas Id for <' + ucid + '> to the one in ' + new_student_file)
         else:
             print(' Canvas ID for <' + ucid + '> has been updated.')
         self.ucid2nsrc[ucid][3] = cid
@@ -278,7 +281,7 @@ if __name__ == "__main__":
         print_usage()
 
     mapping_file = sys.argv[1]
-    new_students_file = sys.argv[2]
+    new_student_files = sys.argv[2]
 
-    stkeys = StudentKeys(mapping_file, new_students_file)
+    stkeys = StudentKeys(mapping_file, new_student_files)
 
