@@ -131,105 +131,102 @@ class StudentKeys():
                 indices[4] = cid_idx
             return indices
 
-        print('\n*** Reading new student info and assigning random Ids')
-
-        if new_student_file.endswith('dta'):
-            fname_wo_ext = new_student_file.split(".dta")[0]
-            csv_file = fname_wo_ext + ".csv"
-            data = pd.read_stata(new_student_file)
-            print("Converting .dta file to .csv file")
-            data.to_csv(csv_file, index=False)
-            new_student_file = csv_file
-
-        if not new_student_file.endswith('.csv'):
-            print('[ERROR]: new_students_file should be either .csv or .dta ')
-            print_usage()
-            exit()
-
         if os.path.exists(new_student_file):
+
+            print('\n*** Reading new student info and assigning random Ids')
+
+            if not (new_student_file.endswith('.csv') or new_student_file.endswith('.dta')):
+                print('[ERROR]: new_students_file should be either .csv or .dta ')
+                print_usage()
+                exit()
+
             print('\n*** Loading the new students file "' + new_student_file +'"')
-            print('Loading file "'+ new_student_file +'"')
-            with open(new_student_file, 'r') as f:
-                reader = csv.reader(f, delimiter=',')
-                header = next(reader)
-                name_idx, sid_idx, ucid_idx, rid_idx, cid_idx = get_indices_from_header(header)
 
-                # Default values
-                name = ''
-                stid = ''  # Student ID is kept as string since the extension students had alphabets
-                cid = 0
+            if new_student_file.endswith('dta'):
+                data = pd.read_stata(new_student_file)
+            else:
+                data = pd.read_csv(new_student_file)
 
-                for row in reader:
-                    if ucid_idx == -1:
-                        print('[ERROR] There is no column called "ucinetid" in file ' + new_student_file)
-                        print('        Stopping the process..')
-                        exit()
-                    else:
-                        ucid = row[ucid_idx].lower()
+            header = data.columns
+            name_idx, sid_idx, ucid_idx, rid_idx, cid_idx = get_indices_from_header(header)
+            if ucid_idx == -1:
+                print('[ERROR] There is no column called "ucinetid" in file ' + new_student_file)
+                print('        Stopping the process..')
+                exit()
 
-                    if ucid.isalnum():
-                        if name_idx > -1:
-                            name = row[name_idx]
-                            if len(name.split(",")) > 1:
-                                namesplit = name.split(",")
-                                name = namesplit[1:] + " " + namesplit[0]
-                        if sid_idx > -1:
-                            stid = row[sid_idx]
-                        if cid_idx > -1:
-                            if row[cid_idx] == '':
-                                cid = 0
-                            else:
-                                cid = int(float(row[cid_idx]))
+            # Default values
+            name = ''
+            stid = ''  # Student ID is kept as string since the extension students had alphabets
+            cid = 0
 
-                        # If UCID-RandomID pair is new
-                        if ucid not in self.ucid2nsrc.keys():
-                            # If new UCINEtID is found
-                            if rid_idx > -1:
-                                # Has RandomID column
-                                if row[rid_idx].isdigit():
-                                    # Read the existing random ID
-                                    rid = int(row[rid_idx])
-                                else:
-                                    # Assign new if empty
-                                    rid = self.get_new_random_id(ucid)
-                            else:
-                                # Does not have random id column. create new one.
-                                rid = self.get_new_random_id(ucid)
-
-                            self.ucid2nsrc[ucid] = [name, stid, rid, cid]
-                            self.ucid2coursearr[ucid] = list(np.zeros(len(self.course_headers)-1, dtype=np.int8))
-                            self.ucid2coursearr[ucid].append(1)
-                            if cid > 0:
-                                self.cid2ucid[cid] = ucid
+            for i, row in data.iterrows():
+                ucid = row[ucid_idx].lower()
+                if ucid.isalnum():
+                    if name_idx > -1:
+                        name = row[name_idx]
+                        if len(name.split(",")) > 1:
+                            namesplit = name.split(",")
+                            name = namesplit[1:] + " " + namesplit[0]
+                    if sid_idx > -1:
+                        stid = str(row[sid_idx])
+                        if stid == 'nan':
+                            stid = ''
+                    if cid_idx > -1:
+                        cid = str(row[cid_idx])
+                        if cid == 'nan':
+                            cid = 0
                         else:
-                            # Already have UCID-RandomID pair. Check if Canvas ID also matches.
-                            # If not, just update to the newer info
-                            # Also check if the name was empty, and update the name to the current name
-                            if cid > 0 and cid != self.ucid2nsrc[ucid][3]:
-                                self.update_canvas_ID(ucid, cid, new_student_file)
+                            cid = int(float(row[cid_idx]))
 
-                            if name_idx > -1 and len(name) > 3 and name != self.ucid2nsrc[ucid][0]:
-                                # print warning if already had a different student name before.
-                                # otherwise just update it
-                                if len(self.ucid2nsrc[ucid][0]) > 2: # has a differnt name
-                                    print('[WARNING]: UCINetID <'+ucid+'> has two different names. ')
-                                    print('           Updating the student name for <'+ucid+'> to the one in '+new_student_file)
-                                else:
-                                    print(' Student name for <'+ucid+'> has been updated.')
-                                self.ucid2nsrc[ucid][0] = name
+                    # If UCID-RandomID pair is new
+                    if ucid not in self.ucid2nsrc.keys():
+                        # If new UCINEtID is found
+                        if rid_idx > -1:
+                            # Has RandomID column
+                            if row[rid_idx].isdigit():
+                                # Read the existing random ID
+                                rid = int(row[rid_idx])
+                            else:
+                                # Assign new if empty
+                                rid = self.get_new_random_id(ucid)
+                        else:
+                            # Does not have random id column. create new one.
+                            rid = self.get_new_random_id(ucid)
 
-                            if sid_idx > -1 and len(stid.strip()) > 3 and stid != self.ucid2nsrc[ucid][1]:
-                                # print warning if already had a different student id before.
-                                # otherwise just update it
-                                if len(self.ucid2nsrc[ucid][1]) > 2:
-                                    print('[WARNING]: UCINetID <'+ucid+'> has two different student IDs. ')
-                                    print('           Updating the student ID for <'+ucid+'> to the one in '+new_student_file)
-                                else:
-                                    print(' Student ID for <'+ucid+'> has been updated.')
-                                self.ucid2nsrc[ucid][1] = stid
+                        self.ucid2nsrc[ucid] = [name, stid, rid, cid]
+                        self.ucid2coursearr[ucid] = list(np.zeros(len(self.course_headers)-1, dtype=np.int8))
+                        self.ucid2coursearr[ucid].append(1)
+                        if cid > 0:
+                            self.cid2ucid[cid] = ucid
+                    else:
+                        # Already have UCID-RandomID pair. Check if Canvas ID also matches.
+                        # If not, just update to the newer info
+                        # Also check if the name was empty, and update the name to the current name
+                        if cid > 0 and cid != self.ucid2nsrc[ucid][3]:
+                            self.update_canvas_ID(ucid, cid, new_student_file)
 
-                            if len(self.ucid2coursearr[ucid]) < len(self.course_headers):
-                                self.ucid2coursearr[ucid].append(1)
+                        if name_idx > -1 and len(name) > 3 and name != self.ucid2nsrc[ucid][0]:
+                            # print warning if already had a different student name before.
+                            # otherwise just update it
+                            if len(self.ucid2nsrc[ucid][0]) > 2: # has a differnt name
+                                print('[WARNING]: UCINetID <'+ucid+'> has two different names. ')
+                                print('           Updating the student name for <'+ucid+'> to the one in '+new_student_file)
+                            else:
+                                print(' Student name for <'+ucid+'> has been updated.')
+                            self.ucid2nsrc[ucid][0] = name
+
+                        if sid_idx > -1 and len(stid.strip()) > 3 and stid != self.ucid2nsrc[ucid][1]:
+                            # print warning if already had a different student id before.
+                            # otherwise just update it
+                            if len(self.ucid2nsrc[ucid][1]) > 2:
+                                print('[WARNING]: UCINetID <'+ucid+'> has two different student IDs. ')
+                                print('           Updating the student ID for <'+ucid+'> to the one in '+new_student_file)
+                            else:
+                                print(' Student ID for <'+ucid+'> has been updated.')
+                            self.ucid2nsrc[ucid][1] = stid
+
+                        if len(self.ucid2coursearr[ucid]) < len(self.course_headers):
+                            self.ucid2coursearr[ucid].append(1)
 
 
     def update_canvas_ID(self, ucid, cid, new_student_file):
