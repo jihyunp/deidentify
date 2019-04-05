@@ -8,13 +8,22 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 3:
         print("")
-        print('** Usage: python ./deidentify_merged_data.py <Mapping File> <Merged Data> ')
-        print('** Example: python  ./deidentify_merged_data.py  ./master_keys.csv  ./identifiable_data/MATH-Merged Data.csv')
-        print("")
+        print('** Usage: python ./deidentify_merged_data.py <Mapping File> <Merged Data Files> ')
+        print('** Example: python  ./deidentify_merged_data.py  ./master_keys.csv  ./merged_data_list.txt')
+        print('')
+        print('   <Mapping File> : A .csv file that has')
+        print('       <Name_firstlast>,<studentid>,<ucinetid>,<randomid>,<canvasid> as the first five columns.')
+        print('       If there is no file with this name, a new mapping file will be created with this name.')
+        print('')
+        print('   <Merged Data Files> :  A .txt file that lists .csv or .dta files of merged student data. ')
+        print('       The .csv or .dta files are like ../Year1/Physics3A_Merged_data.csv ')
+        print('       In each .csv or .dta file, the first row should be the name of each column, and it should have ')
+        print('       at least "studentid", "ucinetid", "name_firstlast" ')
+        print('')
         exit()
 
     mapping_file = sys.argv[1]
-    merged_data_file = sys.argv[2]
+    merged_data_files = sys.argv[2]
 
     ucid2nsrc = {}
     if os.path.exists(mapping_file):
@@ -30,13 +39,18 @@ if __name__ == "__main__":
                 cid = int(row[4])
                 ucid2nsrc[ucid] = [name, stid, rid, cid]
 
-    if os.path.exists(merged_data_file):
+    if os.path.exists(merged_data_files):
+        files = []
+        with open(merged_data_files, 'r') as f:
+            for file in f:
+                files.append(file.splitlines()[0])
+
+    for merged_data_file in files:
         if merged_data_file.endswith('dta'):
             fname_wo_ext = merged_data_file.split(".dta")[0]
-            csv_file = fname_wo_ext + ".csv"
-            data = pd.io.stata.read_stata(merged_data_file)
-            print("Converting .dta file to .csv file")
-            data.to_csv(csv_file, index=False)
+            print("Loading dta file " + merged_data_file)
+            data = pd.read_stata(merged_data_file)
+            data_reader = pd.read_stata(merged_data_file, iterator=True)
 
         elif merged_data_file.endswith('csv'):
             fname_wo_ext = merged_data_file.split(".csv")[0]
@@ -67,8 +81,16 @@ if __name__ == "__main__":
         cols = ['roster_randomid'] + cols
         new_data = new_data.assign(roster_randomid=ridlist)
         new_data = new_data[cols]
-        deiden_merged_data_file = fname_wo_ext + " DEID.csv"
-        new_data.to_csv(deiden_merged_data_file, index=False)
+
+        if merged_data_file.endswith('dta'):
+            deiden_merged_data_file = fname_wo_ext + " DEID.dta"
+            new_data.to_stata(deiden_merged_data_file, write_index=False,
+                              variable_labels=data_reader.variable_labels(), version=117)
+
+        elif merged_data_file.endswith('csv'):
+            deiden_merged_data_file = fname_wo_ext + " DEID.csv"
+            new_data.to_csv(deiden_merged_data_file, index=False)
+
         print("Deidentified merged data has been saved to " + deiden_merged_data_file)
 
 
