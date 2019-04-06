@@ -50,17 +50,22 @@ class StudentKeys():
         self.load_mapping_file()
 
         if new_student_files is not None:
-            if os.path.exists(new_student_files):
-                self.new_student_files = []
-                with open(new_student_files, 'r') as f:
-                    for file in f:
-                        self.new_student_files.append(file.splitlines()[0])
-                for file in self.new_student_files:
-                    new_course_name = self.get_course_name_from_st_file(file)
-                    if new_course_name not in self.course_headers:
-                        self.course_headers.append(new_course_name)
-                    self.load_new_info_and_update_map(file)
-                    self.write_mapping_file()
+
+            self.new_student_files = []
+            with open(new_student_files, 'r') as f:
+                for file in f:
+                    file_path = file.splitlines()[0]
+                    if not os.path.exists(file_path):
+                        print('File %s does not exist!' % file_path)
+                        exit()
+                    self.new_student_files.append(file_path)
+
+            for file in self.new_student_files:
+                new_course_name = self.get_course_name_from_st_file(file)
+                if new_course_name not in self.course_headers:
+                    self.course_headers.append(new_course_name)
+                self.load_new_info_and_update_map(file)
+                self.write_mapping_file()
 
 
     def get_course_name_from_st_file(self, students_fpath):

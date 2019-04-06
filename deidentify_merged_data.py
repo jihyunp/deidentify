@@ -39,11 +39,14 @@ if __name__ == "__main__":
                 cid = int(row[4])
                 ucid2nsrc[ucid] = [name, stid, rid, cid]
 
-    if os.path.exists(merged_data_files):
-        files = []
-        with open(merged_data_files, 'r') as f:
-            for file in f:
-                files.append(file.splitlines()[0])
+    files = []
+    with open(merged_data_files, 'r') as f:
+        for file in f:
+            file_path = file.splitlines()[0]
+            if not os.path.exists(file_path):
+                print('File %s does not exist!' % file_path)
+                exit()
+            files.append(file_path)
 
     for merged_data_file in files:
         if merged_data_file.endswith('dta'):
