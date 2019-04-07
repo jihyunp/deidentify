@@ -86,15 +86,12 @@ if __name__ == "__main__":
         new_data = new_data[cols]
 
         if merged_data_file.endswith('dta'):
-            deiden_merged_data_file = fname_wo_ext + " DEID.dta"
-            new_data.to_stata(deiden_merged_data_file, write_index=False,
+           new_data.to_stata(fname_wo_ext+" DEID.dta", write_index=False,
                               variable_labels=data_reader.variable_labels(), version=117)
 
-        elif merged_data_file.endswith('csv'):
-            deiden_merged_data_file = fname_wo_ext + " DEID.csv"
-            new_data.to_csv(deiden_merged_data_file, index=False)
+        new_data.to_csv(fname_wo_ext+" DEID.csv", index=False)
 
-        print("Deidentified merged data has been saved to " + deiden_merged_data_file)
+        print("Deidentified merged data has been saved to " + fname_wo_ext + " DEID")
 
 
 
