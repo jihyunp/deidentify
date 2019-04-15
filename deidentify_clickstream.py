@@ -114,7 +114,7 @@ class DeidentifyClickstream():
             data = [[str(newid)] + row[2:] for row in reader]
         data[0][0] = 'roster_randomid'
 
-        with open(dst_file, 'w') as fp:
+        with open(dst_file, 'w', newline='') as fp:
             cwriter = csv.writer(fp)
             cwriter.writerows(data)
 

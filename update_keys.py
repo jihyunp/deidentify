@@ -71,7 +71,7 @@ class StudentKeys():
     def get_course_name_from_st_file(self, students_fpath):
         import re
         students_fname = students_fpath.split("/")[-1]
-        return re.sub(r"[^A-Za-z0-9 ]", "", students_fname.split("Merged")[0]).strip()
+        return re.match(r"[A-Za-z ]+[0-9]+[A-Za-z]?\s\d{1,4}[A-Za-z]+\s?\d?", students_fname).group(0).strip()
 
 
     def load_mapping_file(self):
@@ -106,34 +106,26 @@ class StudentKeys():
 
         def get_indices_from_header(header):
             indices = [-1,-1,-1,-1,-1]  # Name, Stid, UCINetid, Randomid, CanvasId
-            name_lastfirst_idx = -1
-            name_idx = -1
-            cid_idx = -1  # sometimes canvas id has the header name 'id'.
             for i, h in enumerate(header):
                 h = h.lower()
-                if "studentid" in h:
+                if "name_firstlast" == h:
+                    indices[0] = i
+                elif (indices[0] == -1) and ("name_lastfirst" == h):
+                    indices[0] = i
+                elif (indices[0] == -1) and ("name" == h):
+                    indices[0] = i
+                elif "studentid" in h:
                     indices[1] = i
-                elif "roster_randomid" in h:
-                    indices[3] = i
                 elif "ucinetid" == h:
                     indices[2] = i
+                elif (indices[2] == -1) and ("sisloginid" == h):
+                    indices[2] = i
+                elif "roster_randomid" in h:
+                    indices[3] = i
                 elif "canvasid" in h:
                     indices[4] = i
-                elif "name_firstlast" == h:
-                    indices[0] = i
-                elif "name_lastfirst" == h:
-                    name_lastfirst_idx = i
-                elif "name" == h:
-                    name_idx = i
-                elif "id" == h:
-                    cid_idx = i
-            if indices[0] == -1:
-                if name_lastfirst_idx > -1:
-                    indices[0] = name_lastfirst_idx
-                elif name_idx > -1:
-                    indices[0] = name_idx
-            if (indices[4] == -1) and (cid_idx > -1):
-                indices[4] = cid_idx
+                elif (indices[4] == -1) and ("id" == h):
+                    indices[4] = i
             return indices
 
         if os.path.exists(new_student_file):
@@ -154,6 +146,7 @@ class StudentKeys():
 
             header = data.columns
             name_idx, sid_idx, ucid_idx, rid_idx, cid_idx = get_indices_from_header(header)
+
             if ucid_idx == -1:
                 print('[ERROR] There is no column called "ucinetid" in file ' + new_student_file)
                 print('        Stopping the process..')
@@ -166,12 +159,13 @@ class StudentKeys():
 
             for i, row in data.iterrows():
                 ucid = row[ucid_idx].lower()
+
                 if ucid.isalnum():
                     if name_idx > -1:
                         name = row[name_idx]
                         if len(name.split(",")) > 1:
                             namesplit = name.split(",")
-                            name = namesplit[1:] + " " + namesplit[0]
+                            name = namesplit[1].strip() + " " + namesplit[0].strip()
                     if sid_idx > -1:
                         stid = str(row[sid_idx])
                         if stid == 'nan':
@@ -197,6 +191,7 @@ class StudentKeys():
                         else:
                             # Does not have random id column. create new one.
                             rid = self.get_new_random_id(ucid)
+
 
                         self.ucid2nsrc[ucid] = [name, stid, rid, cid]
                         self.ucid2coursearr[ucid] = list(np.zeros(len(self.course_headers)-1, dtype=np.int8))

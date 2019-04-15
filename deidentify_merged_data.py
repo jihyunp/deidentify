@@ -55,6 +55,21 @@ if __name__ == "__main__":
             data = pd.read_stata(merged_data_file)
             data_reader = pd.read_stata(merged_data_file, iterator=True)
 
+            # Deal with encoding problems in data and value labels of Stata files
+            for col in data.select_dtypes(include=object).columns:
+                data[col] = data[col].str.encode('utf-8').str.decode('ascii', 'ignore')
+                # data[col] = data[col].str.replace("\u2019", "'")
+                # data[col] = data[col].str.replace("\uff0c", ",")
+                # data[col] = data[col].str.replace("\uff01", "!")
+
+            value_labels = {}
+            for var in data_reader.value_labels().keys():
+                var_recode = var.encode('utf-8').decode('latin-1', 'ignore')
+                value_labels[var_recode] = {}
+                for val in data_reader.value_labels()[var].keys():
+                    val_lab_recode = data_reader.value_labels()[var][val].encode('utf-8').decode('latin-1', 'ignore')
+                    value_labels[var_recode][val] = val_lab_recode
+
         elif merged_data_file.endswith('csv'):
             fname_wo_ext = merged_data_file.split(".csv")[0]
             print("Loading csv file "+ merged_data_file)
@@ -65,29 +80,33 @@ if __name__ == "__main__":
             exit()
 
         ridlist = []
-        for uci in data['ucinetid']:
+        if 'ucinetid' in data.columns:
+            ucid_col = 'ucinetid'
+        elif 'sisloginid' in data.columns:
+            ucid_col = 'sisloginid'
+        for uci in data[ucid_col]:
             ucinetid = uci.lower()
-            ridlist.append(ucid2nsrc[ucinetid][2])
+            if ucid2nsrc.get(ucinetid) is None:
+                rid = None
+            else:
+                rid = ucid2nsrc[ucinetid][2]
+            ridlist.append(rid)
 
         # Drop the columns
         new_data = data
-        col_list = ['name', 'studentid', 'ucinetid', 'canvasid', 'loginid', 'email', 'middle_last']
+        col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'canv_id',
+                       'sisid', 'rosterid', 'firstinformal', 'middle_last']
 
         for col in col_list:
             for col_in_data in data.columns:
                 if (col in col_in_data) or (col_in_data == 'id'):
                     print("Deleting column "+ col_in_data)
                     new_data.drop(col_in_data, axis=1, inplace=True)
-
-
-        cols = new_data.columns.tolist()
-        cols = ['roster_randomid'] + cols
         new_data = new_data.assign(roster_randomid=ridlist)
-        new_data = new_data[cols]
 
         if merged_data_file.endswith('dta'):
            new_data.to_stata(fname_wo_ext+" DEID.dta", write_index=False,
-                              variable_labels=data_reader.variable_labels(), version=117)
+                              variable_labels=value_labels, version=117)
 
         new_data.to_csv(fname_wo_ext+" DEID.csv", index=False)
 
