@@ -1,20 +1,21 @@
 from update_keys import *
+import re
 
 __author__ = 'jihyunp'
 
 def print_usage_deidentify():
     print('')
     print('----------------------------------------------------------------------------------------------')
-    print('** Usage: python ./deidentify_clickstream.py <Mapping File> <Clickstream Data Directory> ')
-    print('** Example: python  ./deidentify_clickstream.py  ./master_keys.csv  ./identifiable_data/MATH-Clickstream ')
+    print('** Usage: python ./deidentify_clickstream.py <Mapping File> <Clickstream Data Directories> ')
+    print('** Example: python  ./deidentify_clickstream.py  ./master_keys.csv  ./clickstream_folders.txt ')
     print('----------------------------------------------------------------------------------------------')
     print('')
     print('   <Mapping File> : Should be a .csv file that has')
     print('       <Name_firstlast>,<studentid>,<ucinetid>,<randomid>,<canvasid> as the first five columns.')
     print('       To run this program, there should be a mapping between the <randomid> and the <canvasid>.')
     print('')
-    print('   <Clickstream Data Directory> :  Path to the data directory where all the clickstream ')
-    print('        data are in..')
+    print('   <Clickstream Data Directories> :  A list of paths to the data directories where all the clickstream ')
+    print('        data are stored, each path for one course.')
     print('')
     print('')
     exit()
@@ -22,7 +23,7 @@ def print_usage_deidentify():
 
 class DeidentifyClickstream():
 
-    def __init__(self, mapping_file, data_dir):
+    def __init__(self, mapping_file, data_dirs):
         """
         Parameters
         ----------
@@ -35,19 +36,26 @@ class DeidentifyClickstream():
         if not os.path.exists(mapping_file):
             print("ERROR! No such mapping file exists! Exiting.")
             exit()
+        self.keys = StudentKeys(mapping_file, new_student_files=None)  # no new student file. Just load the data
 
-        self.keys = StudentKeys(mapping_file, new_students_file=None)  # no new student file. Just load the data
-        self.data_dir = data_dir
-        self.process_clickstream_data()
+        dirs = []
+        with open(data_dirs, 'r') as f:
+            for data_dir in f:
+                data_dir_path = data_dir.splitlines()[0]
+                if not os.path.exists(data_dir_path):
+                    print('Directory %s does not exist!' % data_dir_path)
+                    exit()
+                dirs.append(data_dir_path)
+
+        for data_dir in dirs:
+            self.process_clickstream_data(data_dir)
+
         self.keys.write_mapping_file()
 
 
-    def process_clickstream_data(self):
-        print('\nStep 2: Processing the Clickstream Data')
-        data_dir = self.data_dir
-        if not os.path.isdir(data_dir):
-            print('[ERROR]: Data directory '+data_dir+' does not exist!')
-            exit()
+
+    def process_clickstream_data(self, data_dir):
+        print('Processing the Clickstream Data')
 
         no_rid = []
         deidentified_dir = os.path.join(data_dir, 'deidentified')
@@ -56,7 +64,7 @@ class DeidentifyClickstream():
         make_dir(processed_dir)
 
         for fname in os.listdir(data_dir):
-            if fname.endswith('.csv') and fname[-8:-4].isdigit():
+            if re.search(r'[a-zA-Z0-9]+-[0-9]+.csv', fname):
                 namesplit = fname[:-4].split('-')
                 cid = int(namesplit[-1])
                 ucid = ""
@@ -98,7 +106,7 @@ class DeidentifyClickstream():
     def write_deidentified_csv(self, src_file, dst_file, newid, debug=False):
 
         if debug:
-            print '--> Loading ', src_file, ' and removing the first two columns and saving it to ', dst_file,
+            print('--> Loading ', src_file, ' and removing the first two columns and saving it to ', dst_file)
             sys.stdout.flush()
 
         with open(src_file, 'r') as fp:
@@ -106,7 +114,7 @@ class DeidentifyClickstream():
             data = [[str(newid)] + row[2:] for row in reader]
         data[0][0] = 'roster_randomid'
 
-        with open(dst_file, 'w') as fp:
+        with open(dst_file, 'w', newline='') as fp:
             cwriter = csv.writer(fp)
             cwriter.writerows(data)
 
@@ -118,7 +126,8 @@ if __name__ == "__main__":
         print_usage_deidentify()
 
     mapping_file = sys.argv[1]
-    data_dir = sys.argv[2]
+    data_dirs = sys.argv[2]
+    print(mapping_file)
 
-    deiden = DeidentifyClickstream(mapping_file, data_dir)
+    deiden = DeidentifyClickstream(mapping_file, data_dirs)
 
