@@ -80,10 +80,11 @@ if __name__ == "__main__":
             exit()
 
         ridlist = []
-        if 'ucinetid' in data.columns:
-            ucid_col = 'ucinetid'
-        elif 'sisloginid' in data.columns:
-            ucid_col = 'sisloginid'
+        data_cols_lc = data.columns.str.lower().tolist()
+        if 'ucinetid' in data_cols_lc:
+            ucid_col = data.columns[data_cols_lc.index('ucinetid')]
+        elif 'sisloginid' in data_cols_lc:
+            ucid_col = data.columns[data_cols_lc.index('sisloginid')]
         for uci in data[ucid_col]:
             ucinetid = uci.lower()
             if ucid2nsrc.get(ucinetid) is None:
@@ -99,7 +100,7 @@ if __name__ == "__main__":
 
         for col in col_list:
             for col_in_data in data.columns:
-                if (col in col_in_data) or (col_in_data == 'id'):
+                if (col in col_in_data.lower()) or (col_in_data.lower() == 'id'):
                     print("Deleting column "+ col_in_data)
                     new_data.drop(col_in_data, axis=1, inplace=True)
         new_data = new_data.assign(roster_randomid=ridlist)
