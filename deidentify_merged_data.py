@@ -86,11 +86,14 @@ if __name__ == "__main__":
         elif 'sisloginid' in data_cols_lc:
             ucid_col = data.columns[data_cols_lc.index('sisloginid')]
         for uci in data[ucid_col]:
-            ucinetid = uci.lower()
-            if ucid2nsrc.get(ucinetid) is None:
-                rid = None
+            if isinstance(uci, str):
+                ucinetid = uci.lower()
+                if ucid2nsrc.get(ucinetid) is None:
+                    rid = None
+                else:
+                    rid = ucid2nsrc[ucinetid][2]
             else:
-                rid = ucid2nsrc[ucinetid][2]
+                rid = None
             ridlist.append(rid)
 
         # Drop the columns
