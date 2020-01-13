@@ -99,7 +99,7 @@ if __name__ == "__main__":
         # Drop the columns
         new_data = data
         col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'canv_id',
-                       'sisid', 'rosterid', 'firstinformal', 'middle_last']
+                    'campus', 'sisid', 'rosterid', 'firstinformal', 'middle_last']
 
         for col in col_list:
             for col_in_data in data.columns:
