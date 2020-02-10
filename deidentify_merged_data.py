@@ -98,12 +98,12 @@ if __name__ == "__main__":
 
         # Drop the columns
         new_data = data
-        col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'canv_id',
-                    'campus', 'sisid', 'rosterid', 'firstinformal', 'middle_last']
+        col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'cav_id',
+                    'user_id', 'campus', 'sisid', 'rosterid', 'firstinformal', 'middle_last']
 
         for col in col_list:
             for col_in_data in data.columns:
-                if (col in col_in_data.lower() and 'course' not in col_in_data.lower()) or (col_in_data.lower() == 'id'):
+                if (col in col_in_data.lower()) or (col_in_data.lower() == 'id'):
                     print("Deleting column "+ col_in_data)
                     new_data.drop(col_in_data, axis=1, inplace=True)
         new_data = new_data.assign(roster_randomid=ridlist)
