@@ -73,7 +73,7 @@ if __name__ == "__main__":
         elif merged_data_file.endswith('csv'):
             fname_wo_ext = merged_data_file.split(".csv")[0]
             print("Loading csv file "+ merged_data_file)
-            data = pd.read_csv(merged_data_file)
+            data = pd.read_csv(merged_data_file, dtype=str)
 
         else:
             print("Merged data file should be either .dta or .csv file! Exiting..")
