@@ -73,33 +73,37 @@ if __name__ == "__main__":
         elif merged_data_file.endswith('csv'):
             fname_wo_ext = merged_data_file.split(".csv")[0]
             print("Loading csv file "+ merged_data_file)
-            data = pd.read_csv(merged_data_file)
+            data = pd.read_csv(merged_data_file, dtype=str)
 
         else:
             print("Merged data file should be either .dta or .csv file! Exiting..")
             exit()
 
         ridlist = []
-        if 'ucinetid' in data.columns:
-            ucid_col = 'ucinetid'
-        elif 'sisloginid' in data.columns:
-            ucid_col = 'sisloginid'
+        data_cols_lc = data.columns.str.lower().tolist()
+        if 'ucinetid' in data_cols_lc:
+            ucid_col = data.columns[data_cols_lc.index('ucinetid')]
+        elif 'sisloginid' in data_cols_lc:
+            ucid_col = data.columns[data_cols_lc.index('sisloginid')]
         for uci in data[ucid_col]:
-            ucinetid = uci.lower()
-            if ucid2nsrc.get(ucinetid) is None:
-                rid = None
+            if isinstance(uci, str):
+                ucinetid = uci.lower()
+                if ucid2nsrc.get(ucinetid) is None:
+                    rid = None
+                else:
+                    rid = ucid2nsrc[ucinetid][2]
             else:
-                rid = ucid2nsrc[ucinetid][2]
+                rid = None
             ridlist.append(rid)
 
         # Drop the columns
         new_data = data
-        col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'canv_id',
-                       'sisid', 'rosterid', 'firstinformal', 'middle_last']
+        col_list = ['name', 'email', 'phone', 'student', 'ucinetid', 'login', 'userid', 'canvasid', 'cav_id',
+                    'user_id', 'campus', 'sisid', 'rosterid', 'firstinformal', 'middle_last']
 
         for col in col_list:
             for col_in_data in data.columns:
-                if (col in col_in_data) or (col_in_data == 'id'):
+                if (col in col_in_data.lower()) or (col_in_data.lower() == 'id'):
                     print("Deleting column "+ col_in_data)
                     new_data.drop(col_in_data, axis=1, inplace=True)
         new_data = new_data.assign(roster_randomid=ridlist)

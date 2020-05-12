@@ -163,6 +163,8 @@ class StudentKeys():
                 if ucid.isalnum():
                     if name_idx > -1:
                         name = row[name_idx]
+                        if 'test' in name.lower() and 'student' in name.lower():
+                            continue
                         if len(name.split(",")) > 1:
                             namesplit = name.split(",")
                             name = namesplit[1].strip() + " " + namesplit[0].strip()
